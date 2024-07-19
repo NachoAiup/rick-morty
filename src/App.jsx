@@ -1,30 +1,29 @@
 import { useEffect, useState, useRef } from "react";
 import "./App.css";
 import { debounce } from "lodash";
-
-const API_URL = "https://rickandmortyapi.com/api/character";
-//cfonseca@grupocentrico.com
-
-const statusMap = {
-  Alive: "Vivo 🟢",
-  Dead: "Muerto 🔴",
-  unknown: "Desconocido ⚪",
-};
+import { CharacterCard } from "./components/CharacterCard/CharacterCard";
+import { getCharactersByQuery } from "./api/getCharactersByQuery";
+import { getAllCharacters } from "./api/getAllCharacters";
 
 function App() {
   const [characters, setCharacters] = useState([]);
 
   useEffect(() => {
-    fetch(API_URL)
-      .then((res) => res.json())
-      .then((data) => setCharacters(data.results));
+    const fetchData = async () => {
+      const results = await getAllCharacters();
+      setCharacters(results);
+    };
+    fetchData();
   }, []);
 
   async function search(currentQuery) {
     console.log("Fetch api");
-    const response = await fetch(`${API_URL}/?name=${currentQuery}`);
-    const body = await response.json();
-    setCharacters(body.results);
+    try {
+      const results = await getCharactersByQuery(currentQuery);
+      results ? setCharacters(results) : setCharacters([]);
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   const handleInputChange = (e) => {
@@ -33,8 +32,8 @@ function App() {
   };
 
   const debouncedSearch = useRef(
-    debounce(async (criteria) => {
-      await search(criteria);
+    debounce(async (currentQuery) => {
+      await search(currentQuery);
     }, 800)
   ).current;
 
@@ -45,48 +44,24 @@ function App() {
   }, [debouncedSearch]);
 
   return (
-    <div className="max-w-sm md:max-w-md lg:max-w-3xl xl:max-w-5xl mt-24 flex flex-col items-center justify-center">
+    <div className="max-w-sm md:max-w-md lg:max-w-3xl xl:max-w-5xl mt-24 flex flex-col gap-8">
       <h1 className="text-3xl md:text-5xl lg:text-[80px] xl:text-[96px] font-black">
         RICK AND MORTY API
       </h1>
       <input
         type="text"
         onChange={(e) => handleInputChange(e)}
-        className="border border-[#DADADA] bg-[#f5f5f5] w-full rounded-xl text-[#DADADA] px-5 py-2"
+        className="border border-[#DADADA] bg-nuetral-100 w-full rounded-xl placeholder:text-[#DADADA] text-[#3E3C3C] px-5 py-2"
         placeholder="Nombre del personaje"
       />
-      <div className="md:grid xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 flex flex-col items-center w-full gap-4 my-12 m-auto">
-        {characters.map((character) => (
-          <div
-            key={character.id}
-            className="h-64 w-56 bg-white gap-4 mb-2 rounded-xl p-1.5 shadow-sm"
-          >
-            <div className="rounded-xl h-40 overflow-hidden">
-              <img
-                src={character.image}
-                className="rounded-xl object-center object-contain"
-              />
-            </div>
-            <div className="flex gap-2 mt-2">
-              <p className="font-light text-sm text-[#ABABAB]">Nombre:</p>
-              <p className="font-semibold text-sm text-[#3E3C3C] text-nowrap text-ellipsis overflow-hidden">
-                {character.name}
-              </p>
-            </div>
-            <div className="flex gap-2 mt-2">
-              <p className="font-light text-sm text-[#ABABAB]">Estado:</p>
-              <p className="font-semibold text-sm text-[#3E3C3C] text-nowrap text-ellipsis overflow-hidden">
-                {statusMap[character.status]}
-              </p>
-            </div>
-            <div className="flex gap-2 mt-2">
-              <p className="font-light text-sm text-[#ABABAB]">Localización:</p>
-              <p className="font-semibold text-sm text-[#3E3C3C] text-nowrap text-ellipsis overflow-hidden">
-                {character.location.name}
-              </p>
-            </div>
-          </div>
-        ))}
+      <div className="md:grid xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 flex flex-col items-center w-full gap-4 mb-12 m-auto">
+        {characters.length !== 0 ? (
+          characters.map((character) => (
+            <CharacterCard key={character.id} character={character} />
+          ))
+        ) : (
+          <p>No se encontraron resultados</p>
+        )}
       </div>
     </div>
   );
