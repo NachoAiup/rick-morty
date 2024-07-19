@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./App.css";
+import { debounce } from "lodash";
 
 const API_URL = "https://rickandmortyapi.com/api/character";
 //cfonseca@grupocentrico.com
@@ -14,18 +15,34 @@ function App() {
   const [characters, setCharacters] = useState([]);
 
   useEffect(() => {
-    console.log("Fetch api");
     fetch(API_URL)
       .then((res) => res.json())
       .then((data) => setCharacters(data.results));
   }, []);
 
+  async function search(currentQuery) {
+    console.log("Fetch api");
+    const response = await fetch(`${API_URL}/?name=${currentQuery}`);
+    const body = await response.json();
+    setCharacters(body.results);
+  }
+
   const handleInputChange = (e) => {
     const currentQuery = e.target.value;
-    fetch(`${API_URL}/?name=${currentQuery}`)
-      .then((res) => res.json())
-      .then((data) => setCharacters(data.results));
+    debouncedSearch(currentQuery);
   };
+
+  const debouncedSearch = useRef(
+    debounce(async (criteria) => {
+      await search(criteria);
+    }, 800)
+  ).current;
+
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
 
   return (
     <div className="max-w-sm md:max-w-md lg:max-w-3xl xl:max-w-5xl mt-24 flex flex-col items-center justify-center">
